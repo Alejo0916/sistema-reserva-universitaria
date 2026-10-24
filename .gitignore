@@ -1,0 +1,44 @@
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+
+# Compilacion / build
+dist/
+build/
+*.tsbuildinfo
+
+# Pruebas
+coverage/
+.vitest/
+
+# Base de datos local (la base de datos se genera con `npm run db:migrate` y `npm run db:seed`)
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+backups/
+
+# Entorno
+.env
+.env.*
+!.env.example
+
+# Editor / SO
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OpenSpec (los artefactos de especificacion SI se versionan)
+openspec/.cache/
+openspec/tmp/

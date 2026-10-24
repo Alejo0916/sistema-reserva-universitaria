@@ -111,6 +111,13 @@ Se identificaron **10 hallazgos**. Todos se corrigieron en los archivos de delta
 - **Resolución:** el horario **del espacio** prevalece siempre; el valor por defecto del sistema solo se aplica en el momento de crear el espacio. Escenario añadido en `space-management`.
 - **Estado:** CORREGIDO.
 
+### H-11 · MEDIO · Discrepancia detectada durante la implementacion: el codigo de espacio con guion
+
+- **Dónde:** `space-management` → *Alta de espacio academico*.
+- **Problema:** la especificacion exigia un codigo "alfanumerico en mayusculas", lo que excluia el guion. Los codigos reales de la institucion (`LAB-101`, `AUD-MAIN`, `SALA-COMP-3`) llevan guion, de modo que la regla era **mas restrictiva que la realidad** y habria rechazado la nomenclatura existente. El defecto se detecto al escribir las pruebas de integracion: la primera prueba de alta de espacio devolvio `422` con un codigo perfectamente valido.
+- **Resolución:** siguiendo la regla de SDD ("no se modifica el codigo sin actualizar antes la especificacion"), se **actualizo primero** la especificacion para admitir letras mayusculas, digitos y guiones, con el escenario nuevo *Codigo con guion valido*; despues se ajusto el esquema de validacion. No se toco el codigo antes de cerrar la especificacion.
+- **Estado:** CORREGIDO.
+
 ---
 
 ## 4. Decisiones de la revisión que NO se cambiaron (y su motivo)

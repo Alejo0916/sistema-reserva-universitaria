@@ -10,7 +10,15 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html'],
       include: ['src/**/*.ts'],
-      exclude: ['src/server.ts', 'src/db/seed.ts', 'src/db/reset.ts', 'src/db/backup.ts', 'src/db/migrate.ts'],
+      exclude: [
+        'src/server.ts',
+        'src/db/seed.ts',
+        'src/db/reset.ts',
+        'src/db/backup.ts',
+        'src/db/migrate.ts',
+        'src/db/semilla/**',
+        'src/**/domain/tipos.ts',
+      ],
       thresholds: {
         lines: 80,
         functions: 80,

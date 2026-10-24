@@ -83,6 +83,20 @@ export const ERRORES = {
     new ErrorDominio('CAPACIDAD_EXCEDIDA', 'El numero de asistentes supera la capacidad del espacio', 422, { detalles }),
   rolNoPermitido: (detalles: DetalleError[] = []) =>
     new ErrorDominio('ROL_NO_PERMITIDO', 'El rol solicitado no puede asignarse en esta operacion', 422, { detalles }),
+  duracionExcedida: (detalles: DetalleError[] = []) =>
+    new ErrorDominio(
+      'DURACION_EXCEDIDA',
+      'La duracion de la reserva supera el maximo de horas consecutivas permitido',
+      422,
+      { detalles },
+    ),
+  horasConsecutivasExcedidas: (detalles: DetalleError[] = []) =>
+    new ErrorDominio(
+      'HORAS_CONSECUTIVAS_EXCEDIDAS',
+      'La solicitud supera el maximo de horas consecutivas reservables',
+      422,
+      { detalles },
+    ),
   rolDesconocido: (detalles: DetalleError[] = []) =>
     new ErrorDominio('ROL_DESCONOCIDO', 'El rol indicado no existe en el catalogo', 422, { detalles }),
   tipoEspacioDesconocido: (detalles: DetalleError[] = []) =>

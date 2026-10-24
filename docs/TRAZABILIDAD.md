@@ -1,16 +1,16 @@
 # Matriz de Trazabilidad
 
-**Change:** `add-core-reservation-system`
-**Especificacion:** `openspec/changes/add-core-reservation-system/specs/**/spec.md`
-**Plan de ingenieria:** `PLAN_INGENIERIA.md`
+**Change:** `add-core-reservation-system` + `limit-4-horas-consecutivas`
+**Especificacion:** `openspec/specs/**/spec.md` (vigente, con los deltas ya archivados)
+**Plan de ingenieria:** `PLAN_INGENIERIA.md` (capitulo 9: addendum de la regla de 4 horas)
 
 Cada fila enlaza un requisito de la especificacion con el escenario de
 aceptacion que lo verifica, la prueba automatizada que lo exercise y el
 archivo de implementacion que lo satisface. La columna "Estado" indica si la
 prueba existe y pasa en la suite (`npm test`).
 
-- **44** requisitos | **104** escenarios de aceptacion | **191** pruebas automatizadas
-- Cobertura medida: **93,2 %** de lineas, **81,4 %** de ramas, **97,1 %** de funciones
+- **47** requisitos | **116** escenarios de aceptacion | **214** pruebas automatizadas
+- Cobertura medida: **93 %** de lineas, **82 %** de ramas, **97 %** de funciones
 
 ---
 
@@ -186,6 +186,40 @@ prueba existe y pasa en la suite (`npm test`).
 | Consulta global de auditoria | Filtro por tipo de evento | `tests/integracion/historial.test.ts` -> "filtra por tipo de evento" | `eventoRepo.ts` (`listar`) | PASS |
 | Consulta global de auditoria | Consulta por un rol sin permiso | `tests/integracion/historial.test.ts` -> "responde 403 PERMISO_DENEGADO para un estudiante" | `autorizar` | PASS |
 | Resumen del estado actual de una reserva | Coherencia entre estado e historial | `tests/integracion/historial.test.ts` -> "el detalle y el historial coinciden en el estado final" | `reservaRepo.ts`, `servicioHistorial.ts` | PASS |
+
+---
+
+## 9. Requisitos anadidos por el change `limit-4-horas-consecutivas`
+
+Capacidad afectada: `reservation-management`. El change se implemento **despues** de su especificacion (commit `spec(change): FASE 4 - regla de 4 horas consecutivas`) y quedo archivado en `openspec/changes/archive/`.
+
+| Requisito | Escenario | Prueba | Implementacion | Estado |
+|---|---|---|---|---|
+| Validacion de la coherencia de la franja (MODIFIED) | Duracion superior al maximo | `tests/integracion/regla-horas-consecutivas.test.ts` -> "rechaza una reserva de mas de cuatro horas con DURACION_EXCEDIDA" | `src/modules/reservation-management/application/servicioReservas.ts` (`validarDuracion`) | PASS |
+| Validacion de la coherencia de la franja (MODIFIED) | Duracion exactamente en el maximo | `tests/integracion/regla-horas-consecutivas.test.ts` -> "acepta una reserva de exactamente cuatro horas" | `validarDuracion` | PASS |
+| Validacion de la coherencia de la franja (MODIFIED) | La fecha en el pasado prevalece sobre el exceso de duracion | `tests/integracion/regla-horas-consecutivas.test.ts` -> "la fecha en el pasado prevalece sobre el exceso de duracion" | `servicioReservas.ts` (`validarCoherencia`) | PASS |
+| Limite de duracion por reserva | Reserva de exactamente cuatro horas | `tests/integracion/regla-horas-consecutivas.test.ts` -> "acepta una reserva de exactamente cuatro horas" | `validarDuracion` | PASS |
+| Limite de duracion por reserva | Reserva de mas de cuatro horas | `tests/integracion/regla-horas-consecutivas.test.ts` -> "rechaza una reserva de mas de cuatro horas con DURACION_EXCEDIDA" | `validarDuracion` | PASS |
+| Limite de duracion por reserva | No se persiste la reserva rechazada | `tests/integracion/regla-horas-consecutivas.test.ts` -> "no persiste la reserva rechazada por duracion" | `validarDuracion` | PASS |
+| Limite de duracion por reserva | Reserva de ocho horas en un espacio con horario amplio | `tests/integracion/regla-horas-consecutivas.test.ts` -> "rechaza una reserva de ocho horas aunque quepa en el horario del espacio" | `validarDuracion` | PASS |
+| Limite de duracion por reserva | El limite se aplica con independencia del espacio | `tests/integracion/regla-horas-consecutivas.test.ts` -> "aplica el limite con independencia del espacio" | `validarDuracion` | PASS |
+| Limite de horas consecutivas del usuario | Dos reservas contiguas que suman cuatro horas | `tests/integracion/regla-horas-consecutivas.test.ts` -> "acepta dos reservas contiguas que suman exactamente cuatro horas" | `servicioReservas.ts` (`validarHorasConsecutivas`) | PASS |
+| Limite de horas consecutivas del usuario | Dos reservas contiguas que suman mas de cuatro horas | `tests/integracion/regla-horas-consecutivas.test.ts` -> "rechaza dos reservas contiguas que suman mas de cuatro horas" | `validarHorasConsecutivas` | PASS |
+| Limite de horas consecutivas del usuario | No se persiste la reserva rechazada | `tests/integracion/regla-horas-consecutivas.test.ts` -> "no persiste la reserva rechazada por horas consecutivas" | `validarHorasConsecutivas` | PASS |
+| Limite de horas consecutivas del usuario | Dos solicitudes concurrentes sobre franjas contiguas | `tests/integracion/regla-horas-consecutivas.test.ts` -> "como maximo prospera una de dos solicitudes concurrentes sobre franjas contiguas" | `src/db/transaccion.ts` (`enTransaccion`, `BEGIN IMMEDIATE`) | PASS |
+| Alcance del computo de horas consecutivas | Reservas separadas por un hueco que no se acumula | `tests/integracion/regla-horas-consecutivas.test.ts` -> "admite reservas separadas por un hueco: el total no se acumula" | `src/domain/tiempo.ts` (`fusionarIntervalos`) | PASS |
+| Alcance del computo de horas consecutivas | El computo abarca reservas en espacios distintos | `tests/integracion/regla-horas-consecutivas.test.ts` -> "el computo abarca reservas en espacios distintos" | `src/db/repositorios/reservaRepo.ts` (`listarActivasDeUsuarioEnFecha`) | PASS |
+| Alcance del computo de horas consecutivas | El computo ignora las reservas en estado terminal | `tests/integracion/regla-horas-consecutivas.test.ts` -> "ignora las reservas en estado terminal" | `reservaRepo.ts` | PASS |
+| Alcance del computo de horas consecutivas | El computo ignora las reservas de otras personas | `tests/integracion/regla-horas-consecutivas.test.ts` -> "ignora las reservas de otras personas" | `reservaRepo.ts` | PASS |
+| Alcance del computo de horas consecutivas | El computo se limita a la fecha de la nueva reserva | `tests/integracion/regla-horas-consecutivas.test.ts` -> "el computo se limita a la fecha de la nueva reserva" | `reservaRepo.ts` | PASS |
+
+### Elementos transversales del change
+
+| Elemento | Verificacion |
+|---|---|
+| El limite es configurable (`LIMITE_HORAS_CONSECUTIVAS`, 4 horas por defecto) | `tests/unit/infraestructura.test.ts` -> "convierte el limite de horas consecutivas a minutos", "rechaza un limite de horas consecutivas no positivo" |
+| Los codigos de error nuevos y su estado HTTP | `tests/unit/errores.test.ts` -> "transporta los detalles de los limites de horas" |
+| No regresion: aprobacion, rechazo y bitacora siguen funcionando | `tests/integracion/regla-horas-consecutivas.test.ts` -> bloque "no regresion de las funcionalidades existentes" |
 
 ---
 

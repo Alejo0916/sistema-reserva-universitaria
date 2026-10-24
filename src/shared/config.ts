@@ -10,6 +10,7 @@ export interface Config {
   horarioCierrePorDefecto: string;
   anticipacionMinimaHoras: number;
   duracionMinimaMinutos: number;
+  limiteHorasConsecutivasMinutos: number;
   origenCors: string;
   nivelLog: NivelLog;
   esProduccion: boolean;
@@ -46,6 +47,22 @@ function leerNivel(valor: string | undefined, porDefecto: NivelLog): NivelLog {
   return normalizado;
 }
 
+/**
+ * Lee el limite de horas consecutivas y lo devuelve en minutos.
+ *
+ * La variable de entorno se expresa en horas porque es la unidad en que la
+ * institucion formula la regla ("mas de cuatro horas consecutivas"), pero
+ * el computo se hace en minutos para que los bordes del limite sean
+ * exactos (design.md del change `limit-4-horas-consecutivas`, decision D1).
+ */
+function leerLimiteHorasConsecutivas(valor: string | undefined, porDefecto: number): number {
+  const horas = leerNumero('LIMITE_HORAS_CONSECUTIVAS', valor, porDefecto);
+  if (horas <= 0) {
+    throw new Error('La variable de entorno LIMITE_HORAS_CONSECUTIVAS debe ser mayor que cero');
+  }
+  return Math.round(horas * 60);
+}
+
 export function cargarConfig(entorno: NodeJS.ProcessEnv = process.env): Config {
   const esProduccion = leerTexto('NODE_ENV', entorno.NODE_ENV, 'development') === 'production';
   const secretoJwt = leerTexto('JWT_SECRET', entorno.JWT_SECRET, '');
@@ -67,6 +84,10 @@ export function cargarConfig(entorno: NodeJS.ProcessEnv = process.env): Config {
     horarioCierrePorDefecto: leerTexto('ESPACIO_HORARIO_CIERRE', entorno.ESPACIO_HORARIO_CIERRE, '22:00'),
     anticipacionMinimaHoras: leerNumero('ANTICIPACION_MINIMA_HORAS', entorno.ANTICIPACION_MINIMA_HORAS, 2),
     duracionMinimaMinutos: leerNumero('DURACION_MINIMA_MINUTOS', entorno.DURACION_MINIMA_MINUTOS, 15),
+    limiteHorasConsecutivasMinutos: leerLimiteHorasConsecutivas(
+      entorno.LIMITE_HORAS_CONSECUTIVAS,
+      4,
+    ),
     origenCors: leerTexto('CORS_ORIGIN', entorno.CORS_ORIGIN, 'http://localhost:3000'),
     nivelLog: leerNivel(entorno.LOG_LEVEL, 'info'),
     esProduccion,

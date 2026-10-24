@@ -106,18 +106,21 @@ export class RepositorioReservas {
   }
 
   /**
-   * Reservas de un usuario en un espacio y fecha, con estado en el que la
-   * franja sigue ocupada. Se usa para el control de horas consecutivas.
+   * Reservas de un usuario en una fecha, con estado en el que la franja
+   * sigue ocupada. El computo no filtra por espacio porque la regla de
+   * horas consecutivas se aplica a la union de todas las reservas de la
+   * persona en esa fecha (design.md del change `limit-4-horas-consecutivas`,
+   * decision D4). Usa el indice `idx_reservas_usuario_fecha`.
    */
-  listarActivasDeUsuarioEnEspacio(usuarioId: number, espacioId: number, fecha: string): ReservaDetallada[] {
+  listarActivasDeUsuarioEnFecha(usuarioId: number, fecha: string): ReservaDetallada[] {
     const filas = this.conexion
       .prepare(
         `${SELECT_RESERVA}
-         WHERE r.usuario_id = ? AND r.espacio_id = ? AND r.fecha = ?
+         WHERE r.usuario_id = ? AND r.fecha = ?
            AND r.estado IN ('PENDIENTE', 'APROBADA')
          ORDER BY r.hora_inicio`,
       )
-      .all(usuarioId, espacioId, fecha) as FilaReserva[];
+      .all(usuarioId, fecha) as FilaReserva[];
 
     return filas.map(aReserva);
   }

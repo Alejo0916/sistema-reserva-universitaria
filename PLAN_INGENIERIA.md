@@ -557,7 +557,7 @@ La transformacion es **explicita, seccion por seccion**, y cada capability OpenS
 
 - **Ambiguo (descartado):** "El sistema debe permitir reservar espacios por un maximo de 4 horas."
   (¿Y si el usuario hace dos reservas contiguas de 3 h? ¿Y si la reserva cruza la noche?)
-- ✅ *Verificable:* **"REQ-RES-006 -- Limite de duracion por reserva.** *WHEN* un usuario autenticado crea una reserva cuya duracion (hora_fin - hora_inicio) excede 240 minutos, *THEN* la API debe responder `422` con el codigo `DURACION_EXCEDIDA` y no debe persistir la reserva."
+- **Verificable (adoptado):** **"REQ-RES-006 -- Limite de duracion por reserva.** *WHEN* un usuario autenticado crea una reserva cuya duracion (hora_fin - hora_inicio) excede 240 minutos, *THEN* la API debe responder `422` con el codigo `DURACION_EXCEDIDA` y no debe persistir la reserva."
   **"REQ-RES-007 -- Limite de horas consecutivas del mismo usuario.** *WHEN* un usuario crea una reserva en un espacio y fecha donde la union de sus reservas contiguas o solapadas excede 240 minutos, *THEN* la API debe responder `422` con el codigo `HORAS_CONSECUTIVAS_EXCEDIDAS`."
 
 ### 6.3 ¿Que actividades se delegaran a la IA?
@@ -638,3 +638,62 @@ Se aplican **cinco barreras de verificacion** en cascada; el codigo generado no 
 5. La nueva regla de las 4 horas se anticipa como **cambio gestionado** (Fase 4), con analisis de impacto, delta de especificacion, escenarios nuevos y pruebas, antes de tocar el codigo.
 
 **Este documento se versiona en un commit independiente, previo a la creacion de `openspec/` y a la implementacion.**
+
+---
+
+## Addendum. Chapter 9 — Impacto de la nueva regla de negocio (Fase 4)
+
+> **Este capitulo se anadio durante la Fase 4 de la ETAPA 2**, cuando la institucion solicito la nueva regla de negocio: *ningun usuario podra reservar un espacio academico durante mas de cuatro horas consecutivas*.
+>
+> **El contenido anterior (capitulos 1 a 8) NO se modifica.** El commit de la ETAPA 1 permanece intacto en el historial de Git, de modo que se conserva la evidencia del orden plan -> especificacion -> implementacion. Este addendum documenta el analisis de impacto exigido por la Fase 4 ("Revisar si afecta su plan de ingenieria").
+
+### 9.1 Natureza del impacto
+
+La regla **anade una restriccion de negocio que el plan original no contemplaba**. El plan defini las restricciones de la reserva en terminos de *espacio* (horario de funcionamiento), *fecha* (no puede estar en el pasado, anticipacion minima) y *franja* (duracion minima, no solapamiento), pero no establecia ningun tope de duracion ni ninguna restriccion acumulada por persona.
+
+Por tanto el impacto es de **ampliacion del alcance funcional**, no de contradiccion del plan. Las decisiones tecnicas del plan **resultan confirmadas** por el cambio, no invalidadas:
+
+| Decision del plan | Efecto de la regla nueva | Veredicto |
+|---|---|---|
+| §3.3 Modelo temporal `fecha` + `hora` local | Es lo que hace posible calcular la union de intervalos sin conversiones de zona horaria ni de instante. | **Confirmada y reforzada** |
+| §3.3 Intervalos semiabiertos `[inicio, fin)` | Permite fusionar franjas contiguas sin que un contacto en el extremo genere dos bloques. | **Confirmada** |
+| §3.3 Indice `reservas(usuario_id, fecha)` | Ya existia en el esquema por el filtro por solicitante; el computo de la regla lo reutiliza. **No hace falta ninguna indice nuevo.** | **Confirmada y aprovechada** |
+| §3.4 D-3 (SQL sin ORM) | El computo es una consulta simple mas una fusion en memoria; un ORM habria añadido indireccion sin aportar nada. | **Confirmada** |
+| §3.4 D-2 (SQLite) | La regla no exige consultas espaciales ni funciones de rango, asi que no cambia el argumento de la decision. | **Sin efecto** |
+| §3.1 Reglas puras en el dominio | `fusionarIntervalos` ya existía en `src/domain/tiempo.ts` y esta probada: la regla la reutiliza sin anadir logica temporal nueva. | **Confirmada** |
+| §3.4 D-3 transaccion `IMMEDIATE` | Es la garantia que hace que el computo de las horas consecutivas y la insercion sean atomicos. Si la regla se hubiera implementado fuera de la transaccion, se habria reintroducido una condicion de carrera. | **Confirmada; su papel se amplia** |
+| §1.4 Limitacion L1 (una fecha civil) | Pasa de ser una simplificacion comoda a ser **imprescindible**: el computo de bloques continuos se hace por fecha. | **Reforzada** |
+| §5.2 Riesgos | Se anade **R-11**: la regla puede rechazar combinaciones legitimas de franjas y frenar la actividad de un docente con agenda fragmentada. | **Riesgo nuevo identificado** |
+| §4.4 Definition of Done | La regla se sigue el mismo circuito: change de OpenSpec -> especificacion -> tareas -> implementacion -> pruebas -> archivado. | **Sin cambios** |
+
+### 9.2 Ambiguedad de la regla y su resolucion
+
+El enunciado admite dos lecturas, documentadas en el `proposal.md` del change:
+
+- **Lectura A (por espacio):** el limite se aplica a las reservas de un mismo usuario **en un mismo espacio**. Un docente podria reservar 3 h en cada uno de tres espacios contiguos sin incumplir la norma.
+- **Lectura B (por usuario y fecha):** el limite se aplica a la **union de todas las reservas del usuario en una fecha**, con independencia del espacio.
+
+**Se adopta la lectura B** porque el sujeto de la norma es la persona usuaria ("ningun usuario podra..."), porque la lectura B **contiene** a la lectura A (ninguna combinacion que vulnere A escapa a B) y porque satisface la intencion de fondo de la institucion (uso equitativo de recursos). La lectura A admite un abuso evidente.
+
+La lectura B se implementa sobre la **union de los intervalos** y no sobre la suma de duraciones: las franjas separadas por un hueco rompen la continuidad y no se acumulan.
+
+### 9.3 Cambios derivados que se aplican al plan
+
+1. **§1.2 Necesidades:** se anade la necesidad N9, "limitar el uso de los espacios por persona". El objetivo general del plan no cambia: se refuerza, porque la regla centraliza una restriccion que antes no existia.
+2. **§3.3 Persistencia:** se documenta que el indice `reservas(usuario_id, fecha)` cumple una segunda funcion, y que **no se requiere migracion de esquema** para la regla.
+3. **§5.2:** se registra el riesgo **R-11** con su mitigacion (mensaje de error que indica el bloque continuo conflictivo y limite configurable por entorno).
+4. **§6.2:** la regla confirma la validez del ejemplo de transformacion anticipado en la planificacion: los dos requisitos que el plan ilustro (limite por reserva y limite de horas consecutivas del mismo usuario) son exactamente los que se han implementado.
+
+### 9.4 Lo que el plan NO preveia (deuda documentada)
+
+El plan no preveia tres aspectos que la implementacion ha tenido que resolver. Se registran como **deuda consciente**, no como errores del plan:
+
+1. **La regla no se aplica retroactivamente.** Las reservas ya existentes no se revalidan. Revalidarlas exigiria una politica de negocio sobre reservas ya concedidas (dejar, recortar o cancelar) que la institucion no ha definido. Queda documentado como pregunta abierta en el `design.md` del change.
+2. **El limite de "horas consecutivas" se computa por usuario y fecha, no por rol.** La institucion no fija la excepcion por rol (por ejemplo, que un coordinador pueda reservar mas tiempo para eventos institucionales). Si se requiere, es un change nuevo.
+3. **El limite es global para el conjunto de la institucion, no por edificio o area.** El modelo de datos lo permitiria anadiendo una dimension, pero no se ha anadido por no haberlo solicitado.
+
+### 9.5 Conclusion del addendum
+
+La revision del plan exigida por la Fase 4 **confirma** el modelo temporal, el indice `(usuario_id, fecha)`, la transaccion `IMMEDIATE` y la reutilizacion de las reglas puras del dominio. El unico ajuste material es la ampliacion del alcance funcional con la necesidad N9 y el registro del riesgo R-11.
+
+**Conclusion:** el plan resulto tecnicamente correcto frente a la regla nueva, sin necesidad de revocar ninguna decision. La especificacion previa (ETAPA 2, Fase 1 y 2) ya anticipaba los dos requisitos de la regla, lo que evidencia el valor de especificar antes de implementar.

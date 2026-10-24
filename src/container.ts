@@ -118,6 +118,7 @@ export function crearContenedor(opciones: OpcionesContenedor): Contenedor {
     reloj,
     anticipacionMinimaHoras: config.anticipacionMinimaHoras,
     duracionMinimaMinutos: config.duracionMinimaMinutos,
+    limiteHorasConsecutivasMinutos: config.limiteHorasConsecutivasMinutos,
   });
 
   const historial = new ServicioHistorial({

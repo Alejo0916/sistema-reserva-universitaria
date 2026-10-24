@@ -38,6 +38,20 @@ describe('catalogo de errores', () => {
     expect(ERRORES.rolDesconocido().estado).toBe(422);
     expect(ERRORES.tipoEspacioDesconocido().estado).toBe(422);
     expect(ERRORES.automodificacionProhibida().estado).toBe(409);
+    expect(ERRORES.duracionExcedida().estado).toBe(422);
+    expect(ERRORES.duracionExcedida().codigo).toBe('DURACION_EXCEDIDA');
+    expect(ERRORES.horasConsecutivasExcedidas().estado).toBe(422);
+    expect(ERRORES.horasConsecutivasExcedidas().codigo).toBe('HORAS_CONSECUTIVAS_EXCEDIDAS');
+  });
+
+  it('transporta los detalles de los limites de horas', () => {
+    const duracion = ERRORES.duracionExcedida([{ campo: 'horaFin', mensaje: '241 minutos' }]);
+    const consecutivas = ERRORES.horasConsecutivasExcedidas([
+      { campo: 'horaInicio', mensaje: 'bloque de 09:00 a 14:00' },
+    ]);
+
+    expect(duracion.detalles[0]?.mensaje).toContain('241');
+    expect(consecutivas.detalles[0]?.mensaje).toContain('09:00');
   });
 
   it('deriva el codigo del recurso no encontrado', () => {

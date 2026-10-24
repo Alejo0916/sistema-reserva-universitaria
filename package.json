@@ -21,7 +21,7 @@
     "db:seed": "tsx src/db/seed.ts",
     "db:reset": "tsx src/db/reset.ts",
     "db:backup": "tsx src/db/backup.ts",
-    "openspec:validate": "openspec validate --strict",
+    "openspec:validate": "openspec validate --all --strict",
     "openspec:list": "openspec list"
   },
   "dependencies": {

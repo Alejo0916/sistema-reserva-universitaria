@@ -64,7 +64,7 @@ El sistema SHALL impedir que una misma persona acumule un bloque continuo de res
 - **AND** no se persiste ninguna reserva
 
 #### Scenario: Dos solicitudes concurrentes del mismo usuario sobre franjas contiguas
-- **WHEN** un usuario envia dos solicitudes concurrentes de 09:00 a 11:00 y de 11:00 a 13:00 en la misma fecha y espacio
+- **WHEN** un usuario envia dos solicitudes concurrentes de 09:00 a 11:00 y de 11:00 a 14:00 en la misma fecha y espacio
 - **THEN** como maximo una de las dos prospera con `201` y la otra recibe `422` con el codigo de error `HORAS_CONSECUTIVAS_EXCEDIDAS`
 
 ### Requirement: Alcance del computo de horas consecutivas

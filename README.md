@@ -102,6 +102,7 @@ Todas las variables están documentadas en [`.env.example`](.env.example).
 | `ESPACIO_HORARIO_CIERRE` | `22:00` | Horario de cierre inicial aplicado a los espacios nuevos. |
 | `ANTICIPACION_MINIMA_HORAS` | `2` | Anticipación mínima para solicitar una reserva. |
 | `DURACION_MINIMA_MINUTOS` | `15` | Duración mínima de una reserva. |
+| `LIMITE_HORAS_CONSECUTIVAS` | `4` | Máximo de horas **consecutivas** que una persona puede tener reservadas en una misma fecha (se convierte a minutos al cargar la configuración). |
 | `CORS_ORIGIN` | `http://localhost:3000` | Origen permitido para CORS. |
 | `LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error`. |
 
@@ -172,10 +173,10 @@ Estado actual de la suite:
 
 | Métrica | Valor |
 |---|---|
-| Pruebas automatizadas | **191** (unitarias + de integración) |
-| Cobertura de líneas | **93,2 %** |
-| Cobertura de ramas | **81,4 %** |
-| Cobertura de funciones | **97,1 %** |
+| Pruebas automatizadas | **214** (unitarias + de integración) |
+| Cobertura de líneas | **93 %** |
+| Cobertura de ramas | **82 %** |
+| Cobertura de funciones | **97 %** |
 | Duración de la suite | ≈ 2,5 s |
 
 Cada archivo de prueba usa **su propia base de datos en memoria** y **su propio reloj de negocio**, de modo que las pruebas son aisladas, ejecutables en cualquier orden e independientes de la zona horaria de la máquina.
@@ -338,8 +339,9 @@ Restricciones declarativas en el motor: `CHECK (hora_inicio < hora_fin)`, `CHECK
 8. **Separación de funciones.** Quien crea una solicitud no puede aprobarla ni rechazarla (`403 AUTO_APROBACION_PROHIBIDA`).
 9. **Visibilidad.** `DOCENTE` y `ESTUDIANTE` solo ven sus propias reservas; `COORDINADOR` y `ADMIN` ven todas.
 10. **Revocación inmediata.** Desactivar un usuario, cambiarle la contraseña o cerrar sesión invalida al instante todos sus tokens.
+11. **Límite de 4 horas consecutivas.** Una reserva individual no puede superar los 240 minutos (`422 DURACION_EXCEDIDA`). Además, la **unión** de los intervalos que una persona tiene reservados en una misma fecha (en estado `PENDIENTE` o `APROBADA`, con independencia del espacio) no puede contener un bloque continuo superior a 240 minutos (`422 HORAS_CONSECUTIVAS_EXCEDIDAS`). Las franjas separadas por un hueco **no** se acumulan: una reserva de 08:00 a 12:00 y otra de 13:00 a 15:00 son válidas aunque sumen 6 horas.
 
-> La **regla de las cuatro horas consecutivas** solicitada por la institución se incorpora en la Fase 4 del proceso SDD mediante un *change* de OpenSpec. Consulte [`openspec/changes/`](openspec/changes) y el capítulo correspondiente de [`INFORME_FINAL.md`](INFORME_FINAL.md).
+> La **regla de las cuatro horas consecutivas** solicitada por la institución se incorpora en la Fase 4 del proceso SDD mediante el *change* de OpenSpec `limit-4-horas-consecutivas`, archivado en [`openspec/changes/archive/`](openspec/changes/archive). El análisis de impacto, la ambigüedad resuelta y las decisiones técnicas están en el `proposal.md` y el `design.md` de ese change, y en el capítulo 9 de [`PLAN_INGENIERIA.md`](PLAN_INGENIERIA.md).
 
 ---
 

@@ -6,7 +6,7 @@ import type { Reloj } from '../../../shared/reloj.js';
 import type { BusEventos } from '../../../shared/eventBus.js';
 import type { Coleccion, ParametrosPaginacion } from '../../../shared/coleccion.js';
 import { ERRORES } from '../../../domain/errores.js';
-import { aMinutos, esFechaPasada, esFechaValida, fechaCivil, marcaTiempo, minutosEntre } from '../../../domain/tiempo.js';
+import { aMinutos, esFechaPasada, esFechaValida, fechaCivil, formatearHora, fusionarIntervalos, marcaTiempo, minutosEntre, type Intervalo } from '../../../domain/tiempo.js';
 import { transicionValida, type EstadoReserva } from '../../../domain/tipos.js';
 import type { Espacio } from '../../space-management/domain/espacio.js';
 import type { CriteriosReserva, ReservaDetallada } from '../domain/reserva.js';
@@ -19,6 +19,7 @@ export interface DependenciasReservas {
   reloj: Reloj;
   anticipacionMinimaHoras: number;
   duracionMinimaMinutos: number;
+  limiteHorasConsecutivasMinutos: number;
 }
 
 export interface SolicitudCrearReserva {
@@ -86,6 +87,10 @@ export class ServicioReservas {
           ]);
         }
       }
+
+      // 7. Limite de horas consecutivas del usuario. Se computa dentro de la
+      //    misma transaccion para que el computo y la insercion sean atomicos.
+      this.validarHorasConsecutivas(datos, actorId);
 
       const reserva = this.deps.reservas.crear({
         espacioId: espacio.id,
@@ -302,6 +307,64 @@ export class ServicioReservas {
 
     if (detalles.length > 0) {
       throw ERRORES.validacion('Los datos de la reserva no son validos', detalles);
+    }
+
+    // El limite maximo de duracion se comprueba despues de la coherencia
+    // basica, de modo que una franja invertida se reporta como error de
+    // validacion y no como exceso de duracion (spec reservation-management,
+    // requisito "Validacion de la coherencia de la franja").
+    this.validarDuracion(datos);
+  }
+
+  /**
+   * Limite de duracion por reserva: una reserva individual no puede superar
+   * el limite de horas consecutivas (240 minutos por defecto).
+   */
+  private validarDuracion(datos: SolicitudCrearReserva): void {
+    const duracion = minutosEntre(datos.horaInicio, datos.horaFin);
+    if (duracion > this.deps.limiteHorasConsecutivasMinutos) {
+      throw ERRORES.duracionExcedida([
+        {
+          campo: 'horaFin',
+          mensaje: `La duracion solicitada es de ${duracion} minutos y el maximo permitido es de ${this.deps.limiteHorasConsecutivasMinutos} minutos`,
+        },
+      ]);
+    }
+  }
+
+  /**
+   * Limite de horas consecutivas del usuario.
+   *
+   * Computa la union de los intervalos de las reservas activas del usuario
+   * en esa fecha (con independencia del espacio) junto con la franja de la
+   * nueva solicitud, y rechaza si algun bloque continuo supera el limite.
+   *
+   * El computo es sobre la union y no sobre la suma de duraciones: las
+   * franjas separadas por un hueco no se acumulan (design.md del change
+   * `limit-4-horas-consecutivas`, decision D2).
+   */
+  private validarHorasConsecutivas(datos: SolicitudCrearReserva, actorId: number): void {
+    const existentes = this.deps.reservas.listarActivasDeUsuarioEnFecha(actorId, datos.fecha);
+
+    const intervalos: Intervalo[] = existentes.map((reserva) => ({
+      inicio: aMinutos(reserva.horaInicio),
+      fin: aMinutos(reserva.horaFin),
+    }));
+    intervalos.push({ inicio: aMinutos(datos.horaInicio), fin: aMinutos(datos.horaFin) });
+
+    const bloques = fusionarIntervalos(intervalos);
+    const limite = this.deps.limiteHorasConsecutivasMinutos;
+
+    for (const bloque of bloques) {
+      const duracion = bloque.fin - bloque.inicio;
+      if (duracion > limite) {
+        throw ERRORES.horasConsecutivasExcedidas([
+          {
+            campo: 'horaInicio',
+            mensaje: `El bloque continuo de ${formatearHora(bloque.inicio)} a ${formatearHora(bloque.fin)} suma ${duracion} minutos y el maximo permitido es de ${limite} minutos`,
+          },
+        ]);
+      }
     }
   }
 

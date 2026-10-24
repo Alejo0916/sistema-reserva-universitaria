@@ -63,8 +63,23 @@ describe('configuracion', () => {
     expect(config.horarioCierrePorDefecto).toBe('22:00');
     expect(config.anticipacionMinimaHoras).toBe(2);
     expect(config.duracionMinimaMinutos).toBe(15);
+    expect(config.limiteHorasConsecutivasMinutos).toBe(240);
     expect(config.nivelLog).toBe('info');
     expect(config.esProduccion).toBe(false);
+  });
+
+  it('convierte el limite de horas consecutivas a minutos', () => {
+    const config = cargarConfig({ ...base, LIMITE_HORAS_CONSECUTIVAS: '6' });
+    expect(config.limiteHorasConsecutivasMinutos).toBe(360);
+  });
+
+  it('rechaza un limite de horas consecutivas no positivo', () => {
+    expect(() => cargarConfig({ ...base, LIMITE_HORAS_CONSECUTIVAS: '0' })).toThrow(/mayor que cero/);
+    expect(() => cargarConfig({ ...base, LIMITE_HORAS_CONSECUTIVAS: '-2' })).toThrow(/mayor que cero/);
+  });
+
+  it('rechaza un limite de horas consecutivas no numerico', () => {
+    expect(() => cargarConfig({ ...base, LIMITE_HORAS_CONSECUTIVAS: 'muchas' })).toThrow(/numerica/);
   });
 
   it('lee los valores del entorno', () => {

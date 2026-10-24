@@ -23,12 +23,16 @@ El sistema SHALL mantener el catalogo de espacios academicos con los atributos c
 - **THEN** la API responde `403` con el codigo de error `PERMISO_DENEGADO`
 
 ### Requirement: Alta de espacio academico
-El sistema SHALL permitir crear un espacio con el permiso `espacios:escribir`. SHALL validar que el codigo sea unico y que tenga entre 3 y 20 caracteres alfanumericos en mayusculas, que el nombre tenga entre 3 y 120 caracteres, que la capacidad sea un entero mayor que cero y que el horario de apertura sea anterior al horario de cierre. SHALL registrar en la bitacora un evento `ESPACIO_CREADO`.
+El sistema SHALL permitir crear un espacio con el permiso `espacios:escribir`. SHALL validar que el codigo sea unico y que tenga entre 3 y 20 caracteres formados por letras mayusculas, digitos o guiones, que el nombre tenga entre 3 y 120 caracteres, que la capacidad sea un entero mayor que cero y que el horario de apertura sea anterior al horario de cierre. SHALL registrar en la bitacora un evento `ESPACIO_CREADO`.
 
 #### Scenario: Alta valida
 - **WHEN** un administrador crea el espacio con codigo "LAB-101", nombre "Laboratorio de Quimica", tipo `LABORATORIO`, capacidad 24 y horario de 08:00 a 22:00
 - **THEN** la API responde `201` con el espacio creado y activo
 - **AND** la bitacora registra un evento `ESPACIO_CREADO`
+
+#### Scenario: Codigo con guion valido
+- **WHEN** un administrador crea un espacio con codigo "AUD-MAIN"
+- **THEN** la API responde `201` con el espacio creado
 
 #### Scenario: Codigo duplicado
 - **WHEN** se intenta crear un espacio con un codigo ya existente

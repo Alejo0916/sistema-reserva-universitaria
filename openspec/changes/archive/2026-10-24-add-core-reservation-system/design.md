@@ -150,6 +150,8 @@ El codigo de error es parte del contrato (aparece en la especificacion). El mape
 
 **Consecuencia.** El limite de intentos de login usa la misma abstraccion, lo que hace la prueba del bloqueo de 15 minutos determinista.
 
+**Nota sobre la zona horaria.** El reloj del negocio representa una **hora civil local** (la misma que ve la persona usuaria en el calendario de la institucion), no un instante UTC. Las comparaciones de fecha usan `fechaCivil(instante)`, que extrae anio, mes y dia en hora local. Por eso el reloj de prueba se construye con el constructor local de `Date` y las horas de las reservas se interpretan tambien en hora local: de este modo las pruebas son identicas en cualquier zona horaria (riesgo R-09 del plan).
+
 ### D9 · Limite de intentos de login en memoria
 
 **Decision.** Un servicio `LimitadorIntentos` mantiene un `Map<correo, { fallos: number, ventanaDesde: Date }>` en memoria del proceso. Al superar 5 fallos en 15 minutos devuelve `429 DEMASIADOS_INTENTOS`.

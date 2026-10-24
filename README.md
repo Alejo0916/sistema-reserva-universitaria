@@ -414,8 +414,26 @@ El historial de Git documenta la secuencia exigida por la cátedra:
 ```bash
 npx openspec list --specs        # Listar la especificación vigente
 npx openspec show <capacidad>    # Ver una capacidad
-npx openspec validate --strict   # Validar especificaciones y cambios
+npx openspec validate --all --strict   # Validar especificaciones y cambios
 npx openspec archive <change>    # Archivar un cambio ya implementado
+```
+
+### Publicación en GitHub
+
+El repositorio remoto está configurado como `origin` y el historial es **lineal** (14 commits, sin ramas auxiliares), de modo que la secuencia plan → especificación → implementación → cambio se lee de un vistazo en `git log --oneline --graph`.
+
+```bash
+# Autenticarse (si el repositorio es privado, con un token de acceso personal)
+gh auth login
+
+# Publicar
+git push -u origin main
+```
+
+Si el repositorio remoto aún no existe, créalo antes (vacío, sin README ni `.gitignore`) para evitar un historial divergente:
+
+```bash
+gh repo create Alejandro0916/sistema-reserva-universitaria --private --source=. --remote=origin --push
 ```
 
 ---

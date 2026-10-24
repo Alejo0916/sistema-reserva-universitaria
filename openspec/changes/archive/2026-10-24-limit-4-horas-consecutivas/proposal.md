@@ -53,7 +53,7 @@ Consecuencias sobre el plan:
 | Seccion del plan | Efecto | Decision |
 |---|---|---|
 | §1.2 Necesidades (N4, N6) | Se anade una necesidad no contemplada: acotar el uso por persona. | Se registra como amplificacion, no como contradiccion: el objetivo de "fuente unica de verdad con integridad transaccional" se mantiene y se refuerza. |
-| §1.4 Alcance y limitaciones | La limitacion L1 (reservas dentro de una misma fecha civil) pasa a ser **imprescindible**: el computo de horas consecutivas se hace por fecha. | Se mantiene sin cambios. La regla la reinforce en lugar de relajarla. |
+| §1.4 Alcance y limitaciones | La limitacion L1 (reservas dentro de una misma fecha civil) pasa a ser **imprescindible**: el computo de horas consecutivas se hace por fecha. | Se mantiene sin cambios. La regla la refuerza en lugar de relajarla. |
 | §3.3 Persistencia | El modelo temporal (fecha civil + hora local) es el que hace posible calcular la union de intervalos sin conversiones. | **Se confirma la decision**: el modelo elegido en la planificacion es el que hace barato y legible el calculo. |
 | §3.4 D-3 (SQL sin ORM) | El computo de la union se hace en SQL (consulta de las reservas del usuario en la fecha) y en TypeScript (fusion de intervalos). | **Se confirma la decision**: el SQL a mano permite expresar la consulta con indices y sin capas de traduccion. |
 | §5.2 Riesgos | Se anade un riesgo: que la regla rechace combinaciones legitimas de franjas y bloquee la actividad de un docente con agenda fragmentada. | Se registra como R-11 con su mitigacion (mensaje explicativo con la franja conflictiva). |
@@ -80,7 +80,7 @@ El enunciado "ningun usuario podra reservar un espacio academico durante mas de 
 
 1. El sujeto de la norma es la persona usuaria ("ningun usuario podra..."), no el espacio. Si el limite fuera por espacio, la regla diria "no se podra reservar un espacio durante mas de cuatro horas consecutivas".
 2. La lectura B **contiene** a la lectura A: si un mismo espacio queda bloqueado mas de 4 h seguidas, tambien se supera el limite global. Ninguna reserva que viola la lectura A escapa a la lectura B.
-3. La lectura B satisface la intencion de fondo de la institucion (uso equitativo de los recursos). La lectura A admite unabusodeclarado.
+3. La lectura B satisface la intencion de fondo de la institucion (uso equitativo de los recursos). La lectura A admite un abuso declarado.
 
 La lectura B se implementa calculando la **union de los intervalos** de las reservas del usuario en la fecha, no la suma de sus duraciones. La distincion es importante: un docente con una reserva de 08:00-12:00 y otra de 13:00-15:00 tiene 6 horas reservadas pero **ningun bloque continuo de mas de 4 horas**, por lo que la reserva es valida. Solo se bloquea cuando existe un **bloque continuo** superior a 240 minutos.
 

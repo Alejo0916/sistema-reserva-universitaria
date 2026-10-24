@@ -18,7 +18,7 @@
 ## 3. Reglas de dominio
 
 - [x] 3.1 Implementar en `src/modules/reservation-management/application/servicioReservas.ts` la validacion `validarDuracion`, que rechace con `DURACION_EXCEDIDA` toda reserva cuya duracion supere el limite, indicando duracion solicitada y maximo. Verificacion: prueba de integracion con una reserva de 241 minutos y otra de exactamente 240.
-- [x] 3.2 Incorporar la comprobacion de duracion maxima a `validarCoherencia`, respetando el orden de validacion fijado en `proposal.md` (coherencia y duracion antes que anticipacion). Verificacion: prueba de integracion que comprueba que una reserva en el pasado con duracion excessive responde `VALIDACION` y no `DURACION_EXCEDIDA`.
+- [x] 3.2 Incorporar la comprobacion de duracion maxima a `validarCoherencia`, respetando el orden de validacion fijado en `proposal.md` (coherencia y duracion antes que anticipacion). Verificacion: prueba de integracion que comprueba que una reserva en el pasado con duracion excesiva responde `VALIDACION` y no `DURACION_EXCEDIDA`.
 - [x] 3.3 Implementar la validacion `validarHorasConsecutivas`, que calcule la union de los intervalos de las reservas activas del usuario en la fecha mas la franja de la nueva solicitud, usando `fusionarIntervalos` del dominio, y rechace con `HORAS_CONSECUTIVAS_EXCEDIDAS` si algun bloque continuo supera el limite, indicando el bloque conflictivo. Verificacion: pruebas de integracion de los siete escenarios del requisito.
 - [x] 3.4 Ejecutar el computo de las horas consecutivas DENTRO de la transaccion `IMMEDIATE`, junto con la verificacion de disponibilidad. Verificacion: prueba de concurrencia con dos solicitudes contiguas simultaneas del mismo usuario.
 

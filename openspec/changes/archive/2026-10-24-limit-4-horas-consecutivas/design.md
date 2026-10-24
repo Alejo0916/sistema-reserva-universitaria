@@ -39,7 +39,7 @@ Restricciones heredadas del diseno vigente que condicionan la solucion:
 
 **Alternativas consideradas.**
 
-- *Comparar horas decimales*: rejectable por error de redondeo en los bordes (2,999 h vs 3 h). Con minutos, el borde es exacto y el escenario "exactamente cuatro horas" es inequivoco.
+- *Comparar horas decimales*: descartable por error de redondeo en los bordes (2,999 h vs 3 h). Con minutos, el borde es exacto y el escenario "exactamente cuatro horas" es inequivoco.
 - *Comparar instantes `Date`*: innecesario; el modelo del sistema ya trabaja con minutos desde la medianoche.
 
 **Consecuencia.** El limite superior e inferior son exactos: una reserva de 09:00 a 13:00 (240 min) se acepta y una de 09:00 a 13:01 (241 min) se rechaza. La prueba de esto es explicita.
@@ -136,4 +136,4 @@ Despliegue:
 
 Ninguna que afecte a la especificacion, al enfoque o al desglose de tareas de este change.
 
-**Cuestion abierta para la institucion (no bloqueante):** Should the limit also apply retroactively to already confirmed reservations, and if so, what should happen to them (leave them, shorten them, or cancel them)? The current implementation deliberately does not revalidate history, because that would require a business policy the institution has not defined. The institution can request a separate change if it needs that behaviour.
+**Cuestion abierta para la institucion (no bloqueante):** ¿La regla debe aplicarse tambien de forma retroactiva a las reservas ya confirmadas y, en ese caso, que debe ocurrir con ellas (dejarlas, recortarlas o cancelarlas)? La implementacion actual **no** revalida el historico, porque ello exigiria una politica de negocio sobre reservas ya concedidas que la institucion no ha definido. Si se necesita ese comportamiento, la institucion puede solicitar un change separado.

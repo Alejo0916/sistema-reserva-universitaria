@@ -26,8 +26,13 @@ El sistema SHALL permitir que un usuario con el permiso `usuarios:escribir` cree
 - **WHEN** un usuario sin el permiso `usuarios:escribir` intenta crear un usuario
 - **THEN** la API responde `403` con el codigo de error `PERMISO_DENEGADO`
 
+#### Scenario: Envelope del listado
+- **WHEN** un administrador lista usuarios
+- **THEN** la respuesta `200` incluye las claves `datos`, `total`, `pagina` y `limite`
+- **AND** cada elemento de `datos` NO contiene ningun campo de contrasena
+
 ### Requirement: Directorio de usuarios
-El sistema SHALL listar los usuarios registrados con paginacion y con filtros opcionales por rol, por estado activo y por texto libre sobre nombre o correo. SHALL exigir el permiso `usuarios:leer`. SHALL responder `200` con la coleccion de usuarios sin contrasena y con el total de coincidencias.
+El sistema SHALL listar los usuarios registrados con paginacion y con filtros opcionales por rol, por estado activo y por texto libre sobre nombre o correo. SHALL exigir el permiso `usuarios:leer`. SHALL responder `200` con el envelope `{ datos, total, pagina, limite }` y con el total de coincidencias.
 
 #### Scenario: Listado con filtro por rol
 - **WHEN** un administrador lista usuarios filtrando por rol `DOCENTE`
@@ -68,6 +73,11 @@ El sistema SHALL permitir que un usuario con el permiso `usuarios:escribir` actu
 #### Scenario: Administrador no puede quitarse su propio rol
 - **WHEN** un administrador intenta quitarse a si mismo el rol `ADMIN`
 - **THEN** la API responde `409` con el codigo de error `AUTOMODIFICACION_PROHIBIDA`
+
+#### Scenario: Administrador no puede desactivarse a si mismo
+- **WHEN** un administrador intenta desactivar su propia cuenta
+- **THEN** la API responde `409` con el codigo de error `AUTOMODIFICACION_PROHIBIDA`
+- **AND** la cuenta permanece activa
 
 ### Requirement: Desactivacion de usuario
 El sistema SHALL permitir desactivar una cuenta de usuario en lugar de eliminarla, de modo que sus reservas historicas conserven la referencia valida. SHALL invalidar los tokens emitidos a ese usuario. SHALL registrar en la bitacora un evento `USUARIO_DESACTIVADO`.

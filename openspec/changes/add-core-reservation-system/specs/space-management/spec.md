@@ -7,11 +7,12 @@ Permite administrar el catalogo de espacios academicos de la institucion (labora
 ## ADDED Requirements
 
 ### Requirement: Catalogo de espacios
-El sistema SHALL mantener el catalogo de espacios academicos con los atributos codigo, nombre, tipo, descripcion, capacidad, edificio, piso, horario de apertura, horario de cierre y estado activo. SHALL listar los espacios con filtros opcionales por tipo y por estado activo. SHALL exigir el permiso `espacios:leer`. SHALL responder `200` con la coleccion de espacios.
+El sistema SHALL mantener el catalogo de espacios academicos con los atributos codigo, nombre, tipo, descripcion, capacidad, edificio, piso, horario de apertura, horario de cierre y estado activo. SHALL listar los espacios con filtros opcionales por tipo y por estado activo. SHALL exigir el permiso `espacios:leer`. SHALL responder `200` con el envelope `{ datos, total, pagina, limite }`.
 
 #### Scenario: Listado del catalogo
 - **WHEN** un usuario autenticado lista los espacios
 - **THEN** la API responde `200` con los espacios del catalogo, cada uno con su codigo, nombre, tipo, capacidad y estado activo
+- **AND** la respuesta incluye las claves `datos`, `total`, `pagina` y `limite`
 
 #### Scenario: Listado filtrado por tipo
 - **WHEN** un usuario autenticado lista los espacios filtrando por tipo `LABORATORIO`
@@ -46,15 +47,30 @@ El sistema SHALL permitir crear un espacio con el permiso `espacios:escribir`. S
 - **THEN** la API responde `422` con el codigo de error `TIPO_ESPACIO_DESCONOCIDO`
 
 ### Requirement: Consulta de un espacio
-El sistema SHALL devolver el detalle de un espacio existente por su identificador o por su codigo. SHALL responder `404` con el codigo `ESPACIO_NO_ENCONTRADO` si no existe.
+El sistema SHALL devolver el detalle de un espacio existente. La consulta `GET /api/espacios/:referencia` SHALL aceptar tanto el identificador numerico como el codigo alfanumerico del espacio. SHALL responder `404` con el codigo `ESPACIO_NO_ENCONTRADO` si no existe.
 
 #### Scenario: Espacio existente por identificador
-- **WHEN** un usuario autenticado solicita el detalle de un espacio existente
+- **WHEN** un usuario autenticado solicita el detalle de un espacio existente usando su identificador
+- **THEN** la API responde `200` con todos los atributos del espacio
+
+#### Scenario: Espacio existente por codigo
+- **WHEN** un usuario autenticado solicita el detalle de un espacio existente usando su codigo
 - **THEN** la API responde `200` con todos los atributos del espacio
 
 #### Scenario: Espacio inexistente
-- **WHEN** se solicita un espacio con un identificador que no existe
+- **WHEN** se solicita un espacio con una referencia que no existe
 - **THEN** la API responde `404` con el codigo de error `ESPACIO_NO_ENCONTRADO`
+
+### Requirement: Prevalencia del horario propio del espacio
+El sistema SHALL usar el horario de apertura y cierre definido en cada espacio para validar las reservas de ese espacio. El horario por defecto del sistema SHALL aplicarse unicamente como valor inicial al crear un espacio. SHALL permitir que un espacio tenga un horario propio distinto del de los demas.
+
+#### Scenario: Cada espacio tiene su propio horario
+- **WHEN** se consultan dos espacios con horarios de apertura distintos y ambos tienen reservas validas
+- **THEN** cada espacio valida las reservas contra su propio horario
+
+#### Scenario: El horario por defecto se aplica al crear
+- **WHEN** un administrador crea un espacio sin indicar horario
+- **THEN** la API responde `201` con el espacio usando el horario por defecto configurado
 
 ### Requirement: Actualizacion de espacio
 El sistema SHALL permitir actualizar los atributos editables de un espacio con el permiso `espacios:escribir`. SHALL rechazar un codigo duplicado con `409` y un horario invertido con `422`. SHALL registrar en la bitacora un evento `ESPACIO_ACTUALIZADO`.

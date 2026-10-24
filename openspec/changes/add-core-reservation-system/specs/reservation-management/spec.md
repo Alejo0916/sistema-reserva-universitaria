@@ -6,6 +6,34 @@ Permite crear, consultar y cancelar las solicitudes de reserva de espacios acade
 
 ## ADDED Requirements
 
+### Requirement: Numero de asistentes frente a la capacidad del espacio
+El sistema SHALL admitir un campo opcional `asistentes` en la solicitud de reserva. Si se indica, SHALL ser un entero mayor que cero y SHALL NOT superar la capacidad del espacio solicitado. SHALL responder `422` con el codigo `CAPACIDAD_EXCEDIDA` cuando lo supere.
+
+#### Scenario: Asistentes dentro de la capacidad
+- **WHEN** se solicita un espacio con capacidad 24 una reserva para 20 asistentes
+- **THEN** la API responde `201` y la reserva registra 20 asistentes
+
+#### Scenario: Asistentes por encima de la capacidad
+- **WHEN** se solicita un espacio con capacidad 24 una reserva para 30 asistentes
+- **THEN** la API responde `422` con el codigo de error `CAPACIDAD_EXCEDIDA`
+- **AND** no se persiste ninguna reserva
+
+#### Scenario: Asistentes omitido
+- **WHEN** se solicita una reserva sin indicar el numero de asistentes
+- **THEN** la API responde `201` y la reserva registra el numero de asistentes como nulo
+
+### Requirement: Orden de validacion de la solicitud
+El sistema SHALL evaluar las reglas de una solicitud en el siguiente orden: existencia del espacio, coherencia de la franja y de la fecha, anticipacion minima, encaje en el horario del espacio, numero de asistentes y, por ultimo, disponibilidad de la franja. SHALL devolver el error de la primera regla incumplida.
+
+#### Scenario: La fecha en el pasado prevalece sobre la anticipacion
+- **WHEN** se solicita una reserva con una fecha anterior al dia actual
+- **THEN** la API responde `422` con el codigo de error `VALIDACION` y el detalle del campo `fecha`
+- **AND** NO responde con el codigo `ANTICIPACION_INSUFICIENTE`
+
+#### Scenario: El espacio inexistente prevalece sobre las demas reglas
+- **WHEN** se solicita una reserva para un espacio que no existe con una franja de 10:00 a 12:00
+- **THEN** la API responde `404` con el codigo de error `ESPACIO_NO_ENCONTRADO`
+
 ### Requirement: Creacion de solicitud de reserva
 El sistema SHALL permitir que un usuario con el permiso `reservas:crear` cree una solicitud de reserva indicando espacio, fecha, hora de inicio, hora de fin y justificacion. SHALL crear la reserva en estado `PENDIENTE`, devolver `201` con la reserva creada y registrar en la bitacora un evento `RESERVA_CREADA`.
 
@@ -114,11 +142,15 @@ El sistema SHALL evaluar la disponibilidad y registrar la reserva dentro de una 
 - **AND** en la base de datos existe una sola reserva para esa franja
 
 ### Requirement: Consulta de reservas
-El sistema SHALL listar las reservas con filtros opcionales por espacio, por estado, por fecha y por solicitante. Los roles `DOCENTE` y `ESTUDIANTE` SHALL recibir unicamente sus propias reservas y los roles `ADMIN` y `COORDINADOR` la totalidad. SHALL responder `200` con la coleccion de reservas.
+El sistema SHALL listar las reservas con filtros opcionales por espacio, por estado, por fecha y por solicitante. Los roles `DOCENTE` y `ESTUDIANTE` SHALL recibir unicamente sus propias reservas con independencia del filtro por solicitante, y los roles `ADMIN` y `COORDINADOR` la totalidad. SHALL responder `200` con el envelope `{ datos, total, pagina, limite }`.
 
 #### Scenario: El estudiante solo ve sus reservas
 - **WHEN** un estudiante lista las reservas y existen reservas de otros usuarios
 - **THEN** la respuesta `200` contiene unicamente las reservas del propio estudiante
+
+#### Scenario: El filtro por solicitante no amplía el alcance de un estudiante
+- **WHEN** un estudiante lista las reservas filtrando por el identificador de otro usuario
+- **THEN** la respuesta `200` sigue conteniendo unicamente las reservas del propio estudiante
 
 #### Scenario: Filtro por estado
 - **WHEN** un administrador lista las reservas filtrando por estado `PENDIENTE`
@@ -127,6 +159,11 @@ El sistema SHALL listar las reservas con filtros opcionales por espacio, por est
 #### Scenario: Filtro por fecha
 - **WHEN** un administrador lista las reservas filtrando por una fecha concreta
 - **THEN** la respuesta `200` contiene unicamente reservas de esa fecha
+
+#### Scenario: Envelope de la coleccion
+- **WHEN** un administrador lista las reservas
+- **THEN** la respuesta `200` incluye las claves `datos`, `total`, `pagina` y `limite`
+- **AND** `total` es mayor o igual que la cantidad de elementos de `datos`
 
 ### Requirement: Consulta del detalle de una reserva
 El sistema SHALL devolver el detalle de una reserva existente, incluyendo espacio, solicitante, franja horaria, justificacion, estado y motivo de rechazo cuando exista. SHALL responder `404` con el codigo `RESERVA_NO_ENCONTRADA` si no existe, y SHALL restringirse a las reservas visibles para el rol del solicitante.

@@ -40,7 +40,7 @@ El sistema SHALL asociar a cada rol un conjunto fijo de permisos. El rol `ADMIN`
 - **THEN** el rol `ESTUDIANTE` aparece sin el permiso `reservas:aprobar` ni con `usuarios:leer`
 
 ### Requirement: Verificacion efectiva de permisos
-El sistema SHALL verificar el permiso requerido ANTES de ejecutar cada operacion protegida y SHALL responder `403` con el codigo de error `PERMISO_DENEGADO` cuando el usuario autenticado no lo posea. SHALL aplicar el permiso al rol vigente del usuario en el momento de la peticion.
+El sistema SHALL verificar el permiso requerido ANTES de ejecutar cada operacion protegida y SHALL responder `403` con el codigo de error `PERMISO_DENEGADO` cuando el usuario autenticado no lo posea. SHALL resolver el rol y sus permisos desde la base de datos en el momento de la peticion, de modo que un cambio de rol o de permisos surta efecto inmediato sobre los tokens ya emitidos.
 
 #### Scenario: Operacion permitida
 - **WHEN** un coordinador solicita aprobar una reserva y su rol incluye `reservas:aprobar`

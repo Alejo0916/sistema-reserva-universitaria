@@ -6,17 +6,21 @@ Permite que las personas usuarias del sistema se identifiquen de forma segura, o
 
 ## ADDED Requirements
 
-### Requirement: Registro publico de usuario
-El sistema SHALL permitir el registro de una persona usuaria mediante nombre, correo electronico, contrasena y rol, asignando por defecto el rol `ESTUDIANTE` cuando el rol no se indica. SHALL validar que el correo tenga formato valido, que la contrasena tenga al menos 8 caracteres y que contenga al menos una letra y un digito. SHALL responder `201` con el usuario creado (sin la contrasena) y el token de sesion.
+### Requirement: Registro publico con rol de menor privilegio
+El sistema SHALL permitir el registro de una persona usuaria mediante nombre, correo electronico y contrasena. SHALL asignar siempre el rol `ESTUDIANTE` y SHALL rechazar con `422` y el codigo `ROL_NO_PERMITIDO` cualquier rol distinto de `ESTUDIANTE` en una peticion publica. SHALL responder `201` con el usuario creado (sin la contrasena) y el token de sesion.
 
-#### Scenario: Registro valido con rol por defecto
+#### Scenario: Registro valido
 - **WHEN** una persona solicita el registro con nombre "Ana Torres", correo "ana@uni.edu" y contrasena "clave1234"
 - **THEN** la API responde `201` con el usuario creado, rol `ESTUDIANTE`, estado activo y un token de sesion
 - **AND** la contrasena almacenada NO es legible en texto plano
 
-#### Scenario: Registro con rol explicito valido
-- **WHEN** una persona solicita el registro con nombre "Luis Paz", correo "luis@uni.edu", contrasena "clave1234" y rol `DOCENTE`
-- **THEN** la API responde `201` con el usuario creado y rol `DOCENTE`
+#### Scenario: Intento de autoasignar un rol privilegiado
+- **WHEN** una persona solicita el registro con rol `ADMIN`
+- **THEN** la API responde `422` con el codigo de error `ROL_NO_PERMITIDO`
+- **AND** no se crea ningun usuario
+
+### Requirement: Validacion de los datos de registro
+El sistema SHALL validar que el correo tenga formato valido, que la contrasena tenga al menos 8 caracteres y que contenga al menos una letra y un digito. SHALL rechazar un correo ya registrado con `409` y el codigo `EMAIL_DUPLICADO`. SHALL responder `422` con el codigo `VALIDACION` y el detalle de los campos invalidos ante datos invalidos. En todos los casos de rechazo SHALL omitir la creacion del usuario.
 
 #### Scenario: Correo electronico duplicado
 - **WHEN** se intenta registrar un correo que ya esta registrado
@@ -27,10 +31,6 @@ El sistema SHALL permitir el registro de una persona usuaria mediante nombre, co
 - **WHEN** se intenta registrar con una contrasena de menos de 8 caracteres o sin digito
 - **THEN** la API responde `422` con el codigo de error `VALIDACION` y el detalle de los campos invalidos
 - **AND** no se crea ningun usuario
-
-#### Scenario: Rol inexistente
-- **WHEN** se intenta registrar con un rol que no existe en el catalogo
-- **THEN** la API responde `422` con el codigo de error `ROL_DESCONOCIDO`
 
 ### Requirement: Inicio de sesion
 El sistema SHALL autenticar a una persona usuaria mediante correo electronico y contrasena. SHALL responder `200` con el token de sesion y los datos publicos del usuario cuando las credenciales sean validas, y `401` con el codigo `CREDENCIALES_INVALIDAS` cuando no lo sean. No SHALL revelar si el correo existe o no.
@@ -48,11 +48,16 @@ El sistema SHALL autenticar a una persona usuaria mediante correo electronico y 
 - **THEN** la API responde `401` con el codigo de error `CREDENCIALES_INVALIDAS`
 
 ### Requirement: Emision y expiracion del token de sesion
-El sistema SHALL emitir un token firmado que contenga el identificador del usuario, su version de token y su rol. SHALL rechazar cualquier token que no tenga firma valida, que haya expirado o cuya version de token sea anterior a la del usuario. SHALL responder `401` con el codigo `NO_AUTENTICADO` en esos casos.
+El sistema SHALL emitir un token firmado que contenga unicamente el identificador del usuario y su version de token. El rol y los permisos SHALL resolverse desde la base de datos en cada peticion, de modo que un cambio de rol surta efecto inmediato sobre los tokens ya emitidos. SHALL rechazar cualquier token que no tenga firma valida, que haya expirado o cuya version de token sea anterior a la del usuario. SHALL responder `401` con el codigo `NO_AUTENTICADO` en esos casos.
 
 #### Scenario: Token valido
 - **WHEN** una peticion incluye un token vigente emitido para un usuario activo
 - **THEN** la API procesa la peticion usando la identidad de ese usuario
+
+#### Scenario: El token no transporta el rol
+- **WHEN** se decodifica un token emitido por el sistema
+- **THEN** su contenido incluye el identificador del usuario y la version de token
+- **AND** NO incluye el rol ni la lista de permisos
 
 #### Scenario: Token expirado
 - **WHEN** una peticion incluye un token cuya fecha de expiracion ya paso
@@ -89,10 +94,23 @@ El sistema SHALL invalidar todos los tokens emitidos previamente para el usuario
 - **WHEN** un usuario que cerro sesion vuelve a iniciar sesion con credenciales validas
 - **THEN** la API responde `200` con un token nuevo que si habilita el acceso
 
-### Requirement: Proteccion contra fuerza bruta
-El sistema SHALL registrar en la bitacora los intentos de inicio de sesion fallidos y SHALL responder `401` con el codigo `CREDENCIALES_INVALIDAS` en cada intento fallido, sin revelar si la cuenta existe.
+### Requirement: Limite de intentos de inicio de sesion
+El sistema SHALL registrar en la bitacora los intentos de inicio de sesion fallidos. SHALL bloquear con `429` y el codigo `DEMASIADOS_INTENTOS` el inicio de sesion de un correo que acumule 5 intentos fallidos en una ventana de 15 minutos. El bloqueo SHALL expirar una vez transcurrida esa ventana. SHALL responder `401` con el codigo `CREDENCIALES_INVALIDAS` en cada intento fallido no bloqueado, sin revelar si la cuenta existe.
 
 #### Scenario: Intento fallido registrado
 - **WHEN** una persona intenta iniciar sesion con una contrasena incorrecta
 - **THEN** la bitacora registra un evento de tipo `LOGIN_FALLIDO` asociado al correo intentado
 - **AND** la API responde `401` con el codigo de error `CREDENCIALES_INVALIDAS`
+
+#### Scenario: Bloqueo tras superar el limite
+- **WHEN** un mismo correo acumula 5 intentos de inicio de sesion fallidos dentro de 15 minutos
+- **THEN** el siguiente intento responde `429` con el codigo de error `DEMASIADOS_INTENTOS`
+- **AND** no se emite ningun token de sesion
+
+#### Scenario: El bloqueo expira
+- **WHEN** han transcurrido mas de 15 minutos desde el ultimo intento fallido de un correo bloqueado
+- **THEN** un nuevo intento con credenciales validas responde `200` con un token de sesion
+
+#### Scenario: El bloqueo no afecta a otros correos
+- **WHEN** un correo esta bloqueado por intentos fallidos
+- **THEN** el inicio de sesion de otro correo no responde `429`
